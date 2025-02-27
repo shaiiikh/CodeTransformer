@@ -453,13 +453,13 @@ def main():
     # Load the appropriate model based on mode
     try:
         if st.session_state.selected_mode == "mode1":  # Pseudocode to C++
-            model_path = r"C:\Users\shaiiikh\py\A3\cpp_to_pseudo_epoch_1.pth"
+            model_path = r"cpp_to_pseudo_epoch_1.pth"
             model = load_model(model_path)
             input_placeholder = "Enter your pseudocode here..."
             output_label = "Generated C++ Code"
             language = "cpp"
         elif st.session_state.selected_mode == "mode2":  # C++ to Pseudocode
-            model_path = r"C:\Users\shaiiikh\py\A3\transformer_epoch_1.pth"
+            model_path = r"transformer_epoch_1.pth"
             model = load_model(model_path)
             input_placeholder = "Enter your C++ code here..."
             output_label = "Generated Pseudocode"
