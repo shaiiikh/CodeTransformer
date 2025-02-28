@@ -1,18 +1,17 @@
 import openai
-import os
 from dotenv import load_dotenv
+import os
+import streamlit as st  # If you're using Streamlit
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# Get the OpenAI API key from the environment variable
-api_key = os.getenv("OPENAI_API_KEY")
+# Set the OpenAI API key
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-if not api_key:
-    raise ValueError("API key is missing. Please set the OPENAI_API_KEY environment variable.")
-
-# Initialize OpenAI client with your API key
-client = openai.OpenAI(api_key=api_key)
+# Check if the API key is correctly set
+if not openai.api_key:
+    st.error("API Key is not set. Please check your .env file and ensure the OPENAI_API_KEY is correctly configured.")
 
 def modelloading(prompt, model="gpt-3.5-turbo"):
     """
@@ -57,20 +56,23 @@ def modelloading(prompt, model="gpt-3.5-turbo"):
             "Pseudocode: FOR i FROM 0 TO 4 DO\n"
             "C++: for(int i = 0; i < 4; ++i) {}\n\n"
 
-            "do not write another other than code or pseudocode, like for example (c++: int x=0;) instead just write (int x=0;)"
+            "do not write another other than code or pseudocode, like for example (c++: int x=0;) instead just write (int x=0;)" 
 
             "Always follow this format exactly."
-            
+
             "if i enter pseudocode instead of c++ when i select c++ to pseudocode do not do anything and vice versa"
         )
 
-        response = client.chat.completions.create(
+        # Make OpenAI API request
+        response = openai.ChatCompletion.create(
             model=model,
             messages=[ 
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ]
         )
-        return response.choices[0].message.content.strip()
+
+        # Return the translated content
+        return response['choices'][0]['message']['content'].strip()
     except Exception as e:
         return f"Error: {str(e)}"
