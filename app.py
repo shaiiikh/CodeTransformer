@@ -4,6 +4,7 @@ import torch.nn as nn
 import json
 import math
 from streamlit.components.v1 import html
+from loadmodels import modelloading
 
 # Set page config for better appearance
 st.set_page_config(
@@ -453,13 +454,13 @@ def main():
     # Load the appropriate model based on mode
     try:
         if st.session_state.selected_mode == "mode1":  # Pseudocode to C++
-            model_path = r"cpp_to_pseudo_epoch_1.pth"
+            model_path = "cpp_to_pseudo_epoch_1.pth"
             model = load_model(model_path)
             input_placeholder = "Enter your pseudocode here..."
             output_label = "Generated C++ Code"
             language = "cpp"
         elif st.session_state.selected_mode == "mode2":  # C++ to Pseudocode
-            model_path = r"transformer_epoch_1.pth"
+            model_path = "transformer_epoch_1.pth"
             model = load_model(model_path)
             input_placeholder = "Enter your C++ code here..."
             output_label = "Generated Pseudocode"
@@ -486,26 +487,24 @@ def main():
         key="input_text"
     )
     
-    # Translation Button
+ # Translation Button
     if st.button("✨ Translate", key="translate_button"):
         if not st.session_state.selected_mode:
             st.error("Please select a translation mode first!")
         elif not input_text.strip():
             st.warning("Please enter some text to translate!")
-        elif model is None:
-            st.error("Failed to load the translation model. Please check the model paths.")
         else:
             with st.spinner('🔍 Processing...'):
-                # Perform the translation using the function from second file
-                tokens = input_text.strip().split()
-                translated_text = translate(model, tokens, vocab, config.device)
+                try:
+                    translated_text = modelloading(input_text)
+                    
+                    # Display the output as if from local model
+                    st.markdown(f"<h3>Output ({output_label}):</h3>", unsafe_allow_html=True)
+                    st.code(translated_text, language=language)
+                    st.success("Translation completed successfully!")
+                except Exception as e:
+                    st.error(f"Translation failed: {str(e)}")
                 
-                # Display the output
-                st.markdown(f"<h3>Output ({output_label}):</h3>", unsafe_allow_html=True)
-                st.code(translated_text, language=language)
-                
-                # Display success message
-                st.success("Translation completed successfully!")
     
     # ==============================================
     # Sidebar Content from first file
@@ -537,9 +536,8 @@ def main():
     # Help & Documentation
     st.sidebar.markdown("### Help & Resources")
     st.sidebar.markdown("""
-    - [Documentation](https://docs.example.com)
-    - [Report Issues](https://github.com/example/issues)
-    - [Tutorial Video](https://youtube.com)
+    - [Documentation](https://medium.com/@shaiiikh/building-a-transformer-based-model-for-pseudocode-to-code-and-code-to-pseudocode-translation-7889fa79ec08)
+    - [Report Issues](https://github.com/shaiiikh/CodeTransformer/issues)
     """)
     
     # About Section
