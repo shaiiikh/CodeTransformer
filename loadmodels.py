@@ -1,14 +1,18 @@
 import openai
-import streamlit as st
+from dotenv import load_dotenv
+import os
 
-# Access the API key directly from Streamlit secrets
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# Load environment variables from .env file
+load_dotenv()
+
+# Retrieve the API key
+api_key = os.getenv("OPENAI_API_KEY")
 
 # Check if the API key is set correctly
-if not openai.api_key:
-    st.error("API key is not set. Please check your Streamlit secrets configuration.")
+if not api_key:
+    raise ValueError("API key is missing. Please check your .env file and ensure the OPENAI_API_KEY is correctly configured.")
 else:
-    st.success("API Key successfully loaded!")
+    openai.api_key = api_key
 
 def modelloading(prompt, model="gpt-3.5-turbo"):
     """
@@ -70,6 +74,5 @@ def modelloading(prompt, model="gpt-3.5-turbo"):
 
         # Return the translated content
         return response['choices'][0]['text'].strip()
-    
     except Exception as e:
         return f"Error: {str(e)}"
