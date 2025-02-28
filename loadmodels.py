@@ -1,17 +1,14 @@
 import openai
-from dotenv import load_dotenv
-import os
-import streamlit as st  # If you're using Streamlit
+import streamlit as st
 
-# Load environment variables
-load_dotenv()
+# Access the API key directly from Streamlit secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# Set the OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# Check if the API key is correctly set
+# Check if the API key is set correctly
 if not openai.api_key:
-    st.error("API Key is not set. Please check your .env file and ensure the OPENAI_API_KEY is correctly configured.")
+    st.error("API key is not set. Please check your Streamlit secrets configuration.")
+else:
+    st.success("API Key successfully loaded!")
 
 def modelloading(prompt, model="gpt-3.5-turbo"):
     """
@@ -63,16 +60,16 @@ def modelloading(prompt, model="gpt-3.5-turbo"):
             "if i enter pseudocode instead of c++ when i select c++ to pseudocode do not do anything and vice versa"
         )
 
-        # Make OpenAI API request
-        response = openai.ChatCompletion.create(
+        # Make OpenAI API request using the new method
+        response = openai.Completion.create(
             model=model,
-            messages=[ 
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
+            prompt=system_prompt + "\n" + prompt,  # Concatenate system prompt and user prompt
+            max_tokens=1000,  # You can adjust the token limit
+            temperature=0.7,  # You can adjust the creativity of the output
         )
 
         # Return the translated content
-        return response['choices'][0]['message']['content'].strip()
+        return response['choices'][0]['text'].strip()
+    
     except Exception as e:
         return f"Error: {str(e)}"
