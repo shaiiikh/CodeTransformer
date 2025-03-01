@@ -1,19 +1,12 @@
-from openai import OpenAI
-from dotenv import load_dotenv
+import openai
 import os
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve the API key from environment variable
-api_key = os.getenv("OPENAI_API_KEY")
-
-# Check if the API key is set correctly
-if not api_key:
-    raise ValueError("API key is missing. Please check your .env file and ensure the OPENAI_API_KEY is correctly configured.")
-else:
-    # Initialize OpenAI client
-    client = OpenAI(api_key=api_key)
+# Initialize OpenAI client with your API key from environment variable
+client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def modelloading(prompt, model="gpt-3.5-turbo"):
     """
@@ -21,7 +14,6 @@ def modelloading(prompt, model="gpt-3.5-turbo"):
     Enforces strict formatting to return only the C++ translation.
     """
     try:
-        # System prompt for context
         system_prompt = (
             "You are a specialized AI that translates strictly between Pseudocode and C++. "
             "Do NOT include explanations, headers, or any additional text. "
@@ -59,26 +51,18 @@ def modelloading(prompt, model="gpt-3.5-turbo"):
             "Pseudocode: FOR i FROM 0 TO 4 DO\n"
             "C++: for(int i = 0; i < 4; ++i) {}\n\n"
 
-            "do not write another other than code or pseudocode, like for example (c++: int x=0;) instead just write (int x=0;)" 
-            
-            "only write c++ code and c++ pseudocode based on the model selected"
+            "do not write another other than code or pseudocode, like for example (c++: int x=0;) instead just write (int x=0;)"
 
             "Always follow this format exactly."
         )
 
-        # Request completion using OpenAI API
-        completion = client.chat.completions.create(
-            model=model,  # Select the model (e.g., gpt-3.5-turbo, gpt-4)
+        response = client.chat.completions.create(
+            model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
-            ],
-            max_tokens=1000,  # Token limit (can adjust as needed)
-            temperature=0.7,  # Adjust creativity
+            ]
         )
-
-        # Return the generated code (response text)
-        return completion.choices[0].message.content.strip()
-    
+        return response.choices[0].message.content.strip()
     except Exception as e:
         return f"Error: {str(e)}"
