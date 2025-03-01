@@ -4,19 +4,21 @@ import torch.nn as nn
 import json
 import math
 import os
-import asyncio
+
+# Disable the Streamlit file watcher which is causing the issues with PyTorch
+os.environ["STREAMLIT_GLOBAL_WATCHER_WARNING_DISABLED"] = "1"
+
+# Import modelloading function - this needs to happen after disabling the watcher
 from loadmodels import modelloading
 
-# Set up asyncio event loop at the beginning of the app
-# This should be done in app.py, not loadmodels.py
-import nest_asyncio
-nest_asyncio.apply()
-
 # Load vocabulary
-with open("vocabulary.json", "r") as f:
-    vocab = json.load(f)
-
-st.sidebar.write(f"✅ Vocabulary loaded with {len(vocab)} tokens")
+try:
+    with open("vocabulary.json", "r") as f:
+        vocab = json.load(f)
+    st.sidebar.write(f"✅ Vocabulary loaded with {len(vocab)} tokens")
+except Exception as e:
+    st.sidebar.error(f"Error loading vocabulary: {str(e)}")
+    vocab = {}  # Fallback empty vocabulary
 
 # Transformer Configuration
 class Config:
@@ -58,7 +60,7 @@ class Seq2SeqTransformer(nn.Module):
             num_decoder_layers=config.num_layers,
             dim_feedforward=config.feedforward_dim,
             dropout=config.dropout,
-            batch_first=True  # Add this to address the PyTorch nested tensor warning
+            batch_first=True  # Add this to address PyTorch warning
         )
         self.fc_out = nn.Linear(config.embed_dim, config.vocab_size)
 
@@ -68,7 +70,7 @@ class Seq2SeqTransformer(nn.Module):
         src_emb = self.positional_encoding(src_emb)
         tgt_emb = self.positional_encoding(tgt_emb)
         
-        # Using batch_first=True, so we don't need to permute dimensions
+        # Using batch_first=True
         out = self.transformer(src_emb, tgt_emb)
         out = self.fc_out(out)
         return out
@@ -77,16 +79,24 @@ class Seq2SeqTransformer(nn.Module):
 @st.cache_resource
 def load_model(path):
     model = Seq2SeqTransformer(config).to(config.device)
-    model.load_state_dict(torch.load(path, map_location=config.device))
-    model.eval()
-    return model
+    try:
+        model.load_state_dict(torch.load(path, map_location=config.device))
+        model.eval()
+        return model
+    except Exception as e:
+        st.error(f"Error loading model from {path}: {str(e)}")
+        return None
 
+# Try loading models with error handling
 try:
     cpp_to_pseudo_model = load_model("cpp_to_pseudo_epoch_1.pth")
     pseudo_to_cpp_model = load_model("transformer_epoch_1.pth")
-    st.sidebar.write("✅ Models loaded successfully!")
+    if cpp_to_pseudo_model and pseudo_to_cpp_model:
+        st.sidebar.write("✅ Models loaded successfully!")
+    else:
+        st.sidebar.warning("Some models failed to load. Falling back to OpenAI API.")
 except Exception as e:
-    st.sidebar.error(f"Error loading models: {str(e)}")
+    st.sidebar.error(f"Error during model loading: {str(e)}")
 
 # Streamlit UI
 st.title("C++ & Pseudocode Translator")
