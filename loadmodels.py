@@ -1,18 +1,19 @@
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve the API key
+# Retrieve the API key from environment variable
 api_key = os.getenv("OPENAI_API_KEY")
 
 # Check if the API key is set correctly
 if not api_key:
     raise ValueError("API key is missing. Please check your .env file and ensure the OPENAI_API_KEY is correctly configured.")
 else:
-    openai.api_key = api_key
+    # Initialize OpenAI client
+    client = OpenAI(api_key=api_key)
 
 def modelloading(prompt, model="gpt-3.5-turbo"):
     """
@@ -20,6 +21,7 @@ def modelloading(prompt, model="gpt-3.5-turbo"):
     Enforces strict formatting to return only the C++ translation.
     """
     try:
+        # System prompt for context
         system_prompt = (
             "You are a specialized AI that translates strictly between Pseudocode and C++. "
             "Do NOT include explanations, headers, or any additional text. "
@@ -60,19 +62,21 @@ def modelloading(prompt, model="gpt-3.5-turbo"):
             "do not write another other than code or pseudocode, like for example (c++: int x=0;) instead just write (int x=0;)" 
 
             "Always follow this format exactly."
-
-            "if i enter pseudocode instead of c++ when i select c++ to pseudocode do not do anything and vice versa"
         )
 
-        # Make OpenAI API request using the new method
-        response = openai.Completion.create(
-            model=model,
-            prompt=system_prompt + "\n" + prompt,  # Concatenate system prompt and user prompt
-            max_tokens=1000,  # You can adjust the token limit
-            temperature=0.7,  # You can adjust the creativity of the output
+        # Request completion using OpenAI API
+        completion = client.chat.completions.create(
+            model=model,  # Select the model (e.g., gpt-3.5-turbo, gpt-4)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=1000,  # Token limit (can adjust as needed)
+            temperature=0.7,  # Adjust creativity
         )
 
-        # Return the translated content
-        return response['choices'][0]['text'].strip()
+        # Return the generated code (response text)
+        return completion.choices[0].message.content.strip()
+    
     except Exception as e:
         return f"Error: {str(e)}"
