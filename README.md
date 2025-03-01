@@ -46,20 +46,20 @@ CodeTransformer is a powerful tool designed to translate between pseudocode and 
 
 ## File Structure
 
-CodeTransformer/
-├── .ipynb_checkpoints/
-├── __pycache__/
-├── checkpoints/
-├── .gitignore
-├── LICENSE
-├── README.md
-├── app.py
-├── cpp_to_pseudo_epoch_1.pth
-├── loadmodels.py
-├── requirements.txt
-├── transformer.ipynb
-├── transformer_epoch_1.pth
-└── vocabulary.json
+### CodeTransformer/
+- ├── .ipynb_checkpoints/
+- ├── __pycache__/
+- ├── checkpoints/
+- ├── .gitignore
+- ├── LICENSE
+- ├── README.md
+- ├── app.py
+- ├── cpp_to_pseudo_epoch_1.pth
+- ├── loadmodels.py
+- ├── requirements.txt
+- ├── transformer.ipynb
+- ├── transformer_epoch_1.pth
+- └── vocabulary.json
 
 
 ## Models
