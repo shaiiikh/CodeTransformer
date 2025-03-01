@@ -31,21 +31,17 @@ CodeTransformer is a powerful tool designed to translate between pseudocode and 
 
 
 ## Usage
-Select Translation Mode:
+1. Select Translation Mode:
+- Choose between "Pseudocode → C++" or "C++ → Pseudocode" using the mode selector.
 
-Choose between "Pseudocode → C++" or "C++ → Pseudocode" using the mode selector.
+2. Input Your Code:
+-Enter your pseudocode or C++ code in the provided text area.
 
-Input Your Code:
+3. Translate:
+- Click the "Translate" button to generate the corresponding output.
 
-Enter your pseudocode or C++ code in the provided text area.
-
-Translate:
-
-Click the "Translate" button to generate the corresponding output.
-
-View Results:
-
-The translated code will be displayed in the output section with syntax highlighting.
+4. View Results:
+-The translated code will be displayed in the output section with syntax highlighting.
 
 
 ## File Structure
