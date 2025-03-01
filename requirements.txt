@@ -1,8 +1,5 @@
 streamlit
 torch
-torchvision
-torchaudio
-numpy
-pandas
+openai
 python-dotenv
-openai>=1.0.0
+nest-asyncio

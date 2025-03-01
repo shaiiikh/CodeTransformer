@@ -3,7 +3,14 @@ import torch
 import torch.nn as nn
 import json
 import math
+import os
+import asyncio
 from loadmodels import modelloading
+
+# Set up asyncio event loop at the beginning of the app
+# This should be done in app.py, not loadmodels.py
+import nest_asyncio
+nest_asyncio.apply()
 
 # Load vocabulary
 with open("vocabulary.json", "r") as f:
@@ -50,7 +57,8 @@ class Seq2SeqTransformer(nn.Module):
             num_encoder_layers=config.num_layers,
             num_decoder_layers=config.num_layers,
             dim_feedforward=config.feedforward_dim,
-            dropout=config.dropout
+            dropout=config.dropout,
+            batch_first=True  # Add this to address the PyTorch nested tensor warning
         )
         self.fc_out = nn.Linear(config.embed_dim, config.vocab_size)
 
@@ -59,8 +67,10 @@ class Seq2SeqTransformer(nn.Module):
         tgt_emb = self.embedding(tgt) * math.sqrt(config.embed_dim)
         src_emb = self.positional_encoding(src_emb)
         tgt_emb = self.positional_encoding(tgt_emb)
-        out = self.transformer(src_emb.permute(1, 0, 2), tgt_emb.permute(1, 0, 2))
-        out = self.fc_out(out.permute(1, 0, 2))
+        
+        # Using batch_first=True, so we don't need to permute dimensions
+        out = self.transformer(src_emb, tgt_emb)
+        out = self.fc_out(out)
         return out
 
 # Load Models
@@ -71,10 +81,12 @@ def load_model(path):
     model.eval()
     return model
 
-cpp_to_pseudo_model = load_model("cpp_to_pseudo_epoch_1.pth")
-pseudo_to_cpp_model = load_model("transformer_epoch_1.pth")
-
-st.sidebar.write("✅ Models loaded successfully!")
+try:
+    cpp_to_pseudo_model = load_model("cpp_to_pseudo_epoch_1.pth")
+    pseudo_to_cpp_model = load_model("transformer_epoch_1.pth")
+    st.sidebar.write("✅ Models loaded successfully!")
+except Exception as e:
+    st.sidebar.error(f"Error loading models: {str(e)}")
 
 # Streamlit UI
 st.title("C++ & Pseudocode Translator")
@@ -83,14 +95,15 @@ user_input = st.text_area("Enter code:")
 
 if st.button("Translate"):
     if user_input.strip():
-        if mode == "C++ → Pseudocode":
-            prompt = f"Translate the following C++ code to Pseudocode:\n\n{user_input}"
-        else:
-            prompt = f"Translate the following Pseudocode to C++:\n\n{user_input}"
-        
-        translated_code = modelloading(prompt)  
+        with st.spinner("Translating..."):
+            if mode == "C++ → Pseudocode":
+                prompt = f"Translate the following C++ code to Pseudocode:\n\n{user_input}"
+            else:
+                prompt = f"Translate the following Pseudocode to C++:\n\n{user_input}"
+            
+            translated_code = modelloading(prompt)  
 
-        st.subheader("Generated Translation:")
-        st.code(translated_code, language="cpp" if mode == "Pseudocode → C++" else "python")
+            st.subheader("Generated Translation:")
+            st.code(translated_code, language="cpp" if mode == "Pseudocode → C++" else "python")
     else:
         st.warning("Please enter some code before translating.")
