@@ -35,7 +35,7 @@ CodeTransformer is a powerful tool designed to translate between pseudocode and 
 - Choose between "Pseudocode → C++" or "C++ → Pseudocode" using the mode selector.
 
 2. Input Your Code:
--Enter your pseudocode or C++ code in the provided text area.
+- Enter your pseudocode or C++ code in the provided text area.
 
 3. Translate:
 - Click the "Translate" button to generate the corresponding output.
@@ -45,9 +45,10 @@ CodeTransformer is a powerful tool designed to translate between pseudocode and 
 
 
 ## File Structure
+
 CodeTransformer/
 ├── .ipynb_checkpoints/
-├── _pycache_/
+├── __pycache__/
 ├── checkpoints/
 ├── .gitignore
 ├── LICENSE
