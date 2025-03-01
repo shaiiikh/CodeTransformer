@@ -60,6 +60,8 @@ def modelloading(prompt, model="gpt-3.5-turbo"):
             "C++: for(int i = 0; i < 4; ++i) {}\n\n"
 
             "do not write another other than code or pseudocode, like for example (c++: int x=0;) instead just write (int x=0;)" 
+            
+            "only write c++ code and c++ pseudocode based on the model selected"
 
             "Always follow this format exactly."
         )
