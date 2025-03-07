@@ -54,11 +54,15 @@ CodeTransformer is a powerful tool designed to translate between pseudocode and 
 - ├── LICENSE
 - ├── README.md
 - ├── app.py
-- ├── cpp_to_pseudo_epoch_1.pth
-- ├── loadmodels.py
+- ├── c2p1.pth
+- ├── p2c1.pth
+- ├── q1q2.ipynb
 - ├── requirements.txt
-- ├── transformer.ipynb
-- ├── transformer_epoch_1.pth
+- ├── spoc-train.csv
+- ├── tokenized_sequences.csv
+- ├── tokenized_spoc.csv
+- ├── tokenized_spoc_padded.csv
+- ├── tokenized_spoc_with_tokens.csv
 - └── vocabulary.json
 
 
