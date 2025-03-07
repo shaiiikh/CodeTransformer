@@ -397,14 +397,15 @@ def main():
         model_path = None
     
     # Code Input Section with appropriate styling
-    st.markdown("<h3 style='margin-top: 30px;'>Input:</h3>", unsafe_allow_html=True)
+    st.markdown("### 📝 Enter Your Code Below:")
     input_text = st.text_area(
     label="Input Code",  # Give it a meaningful label
-    placeholder=input_placeholder,
-    height=250,
+    placeholder="Enter your pseudocode or C++ code here...",
+    height=150,  # Reduce height to prevent unnecessary space
     key="input_text",
-    label_visibility="collapsed"  # Hides the label visually while keeping accessibility
+    label_visibility="collapsed"  # Hide label properly
 )
+
 
     
     # Translation Button
