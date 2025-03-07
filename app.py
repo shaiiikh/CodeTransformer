@@ -75,17 +75,6 @@ custom_css = """
         to { transform: translateY(0); opacity: 1; }
     }
 
-    /* Logo animation */
-    .logo-container {
-        animation: rotate 3s infinite alternate;
-        margin-right: 15px;
-    }
-    
-    @keyframes rotate {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(10deg); }
-    }
-
     /* Code Editor Styling */
     .code-editor {
         background: var(--vscode-editor);
@@ -210,32 +199,37 @@ custom_css = """
         background-color: var(--vscode-accent) !important;
         color: white !important;
     }
+    
+    /* Mode button styling */
+    .mode-button {
+        background-color: var(--vscode-editor);
+        border: 1px solid var(--vscode-border);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 10px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .mode-button:hover {
+        border-color: var(--vscode-accent);
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .mode-button.selected {
+        border: 2px solid var(--vscode-accent);
+        background: rgba(0,122,204,0.1);
+    }
+    
+    .mode-icon {
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
 </style>
 """
 
-# Logos for different translation modes
-cpp_logo = """
-<div class="logo-container">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48">
-  <path d="M14.219 12.969h3.406v1.406h-3.406zM14.219 17.594h3.406V19h-3.406z" fill="#0288d1"/>
-  <path d="M16 3C8.832 3 3 8.832 3 16s5.832 13 13 13 13-5.832 13-13S23.168 3 16 3zm0 2c6.086 0 11 4.914 11 11s-4.914 11-11 11S5 22.086 5 16 9.914 5 16 5z" fill="#0288d1"/>
-  <path d="M21.906 15.219c.367.367.367 1.094 0 1.406-.367.367-1.094.367-1.406 0-.367-.367-.367-1.094 0-1.406.367-.367 1.094-.367 1.406 0zM18.688 15.219c.367.367.367 1.094 0 1.406-.367.367-1.094.367-1.406 0-.367-.367-.367-1.094 0-1.406.367-.367 1.094-.367 1.406 0zM22.5 20.688l1.313 1.781-2.625 1.969L19.5 24.5l-1.969-2.625-2.625 1.969L14.5 22.5l2.625-1.969L14.5 18.5l1.781-1.313 1.969 2.625 1.969-2.625 1.781 1.313z" fill="#0288d1"/>
-</svg>
-</div>
-"""
-
-pseudo_logo = """
-<div class="logo-container">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48">
-  <rect x="4" y="4" width="24" height="24" rx="2" fill="none" stroke="#9370DB" stroke-width="2"/>
-  <line x1="8" y1="10" x2="24" y2="10" stroke="#9370DB" stroke-width="2"/>
-  <line x1="8" y1="16" x2="24" y2="16" stroke="#9370DB" stroke-width="2"/>
-  <line x1="8" y1="22" x2="16" y2="22" stroke="#9370DB" stroke-width="2"/>
-</svg>
-</div>
-"""
-
-st.markdown(custom_css, unsafe_allow_html=True)
+# Include fonts
 html('<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">')
 
 # ==============================================
@@ -328,93 +322,60 @@ def translate(model, input_tokens, vocab, device, max_length=50):
 # ==============================================
 
 def render_header():
-    header_html = """
-    <div class="vscode-header">
-        <h1>
-            Code <span class="header-title">Transformer</span>
-        </h1>
-    </div>
-    """
-    st.markdown(header_html, unsafe_allow_html=True)
-
-def render_mode_selector(selected_mode=None):
-    html_content = """
-    <div class="mode-selector">
-        <div class="mode-card" id="mode1" onclick="selectMode('mode1')">
-            <div class="icon">📝➡️💻</div>
-            <h3>Pseudocode → C++</h3>
-            <p>Convert algorithmic pseudocode to C++ implementation</p>
+    st.markdown(custom_css, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="vscode-header">
+            <h1>Code <span style="color: #007acc;">Transformer</span></h1>
         </div>
-        <div class="mode-card" id="mode2" onclick="selectMode('mode2')">
-            <div class="icon">💻➡️📝</div>
-            <h3>C++ → Pseudocode</h3>
-            <p>Translate C++ code to readable pseudocode</p>
-        </div>
-    </div>
-
-    <script>
-    function selectMode(modeId) {
-        // Clear all selections
-        document.querySelectorAll('.mode-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-        
-        // Mark the selected one
-        document.getElementById(modeId).classList.add('selected');
-        
-        // Set the hidden input value
-        document.getElementById('selected_mode_input').value = modeId;
-        
-        // Submit the form
-        document.getElementById('mode_form').submit();
-    }
-    
-    // Apply initial selection if set
-    document.addEventListener('DOMContentLoaded', function() {
-        const initialMode = document.getElementById('selected_mode_input').value;
-        if (initialMode) {
-            document.getElementById(initialMode).classList.add('selected');
-        }
-    });
-    </script>
-    
-    <form id="mode_form" method="post">
-        <input type="hidden" id="selected_mode_input" name="selected_mode" value="{selected_mode or ''}">
-    </form>
-    """
-    
-    st.markdown(html_content, unsafe_allow_html=True)
-    
-    # Using Streamlit buttons as fallback for the JavaScript functionality
-    col1, col2 = st.columns(2)
-    with col1:
-        pseudo_to_cpp = st.button("Pseudocode → C++", key="btn_mode1")
-    with col2:
-        cpp_to_pseudo = st.button("C++ → Pseudocode", key="btn_mode2")
-    
-    if pseudo_to_cpp:
-        return "mode1"
-    elif cpp_to_pseudo:
-        return "mode2"
-    
-    return selected_mode
+        """, 
+        unsafe_allow_html=True
+    )
 
 # ==============================================
 # Main App Logic
 # ==============================================
 
 def main():
+    # Apply styling and render header
     render_header()
     
     # Initialize session state
     if 'selected_mode' not in st.session_state:
         st.session_state.selected_mode = None
-        
-    # Mode Selection
-    selected_mode = render_mode_selector(st.session_state.selected_mode)
     
-    if selected_mode:
-        st.session_state.selected_mode = selected_mode
+    # Mode Selection Section
+    st.markdown("## Select Translation Mode")
+    
+    col1, col2 = st.columns(2)
+    
+    # Class to style buttons based on selection
+    mode1_class = "mode-button selected" if st.session_state.selected_mode == "mode1" else "mode-button"
+    mode2_class = "mode-button selected" if st.session_state.selected_mode == "mode2" else "mode-button"
+    
+    with col1:
+        st.markdown(f"""
+            <div class="{mode1_class}">
+                <div class="mode-icon">📝➡️💻</div>
+                <h3>Pseudocode → C++</h3>
+                <p>Convert algorithmic pseudocode to C++ implementation</p>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("Select Pseudocode → C++", key="btn_mode1"):
+            st.session_state.selected_mode = "mode1"
+            st.rerun()
+    
+    with col2:
+        st.markdown(f"""
+            <div class="{mode2_class}">
+                <div class="mode-icon">💻➡️📝</div>
+                <h3>C++ → Pseudocode</h3>
+                <p>Translate C++ code to readable pseudocode</p>
+            </div>
+        """, unsafe_allow_html=True)
+        if st.button("Select C++ → Pseudocode", key="btn_mode2"):
+            st.session_state.selected_mode = "mode2"
+            st.rerun()
     
     # Display different input prompts based on selected mode
     if st.session_state.selected_mode == "mode1":
@@ -422,11 +383,13 @@ def main():
         output_label = "Generated C++ Code"
         language = "cpp"
         model_path = "p2c1.pth"  # Pseudocode to C++
+        st.markdown("### 📝 Pseudocode to C++ Translation")
     elif st.session_state.selected_mode == "mode2":
         input_placeholder = "Enter your C++ code here..."
         output_label = "Generated Pseudocode"
         language = "python"  # Using python for pseudocode highlighting
         model_path = "c2p1.pth"  # C++ to Pseudocode
+        st.markdown("### 💻 C++ to Pseudocode Translation")
     else:
         input_placeholder = "Select a translation mode above and enter your code or text here..."
         output_label = "Translation Output"
