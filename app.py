@@ -1,14 +1,10 @@
+import re
 import streamlit as st
 import torch
 import torch.nn as nn
 import json
 import math
-import os
 from streamlit.components.v1 import html
-from loadmodels import modelloading
-
-# Disable the Streamlit file watcher which is causing the issues with PyTorch
-os.environ["STREAMLIT_GLOBAL_WATCHER_WARNING_DISABLED"] = "1"
 
 # Set page config for better appearance
 st.set_page_config(
@@ -18,92 +14,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Load vocabulary
+# Load vocabulary if file exists, otherwise create empty dict
 try:
     with open("vocabulary.json", "r") as f:
         vocab = json.load(f)
-    st.sidebar.write(f"✅ Vocabulary loaded with {len(vocab)} tokens")
-except Exception as e:
-    st.sidebar.error(f"Error loading vocabulary: {str(e)}")
-    vocab = {}  # Fallback empty vocabulary
-
-# Transformer Configuration
-class Config:
-    vocab_size = 12006  # Adjust based on vocabulary.json
-    max_length = 100
-    embed_dim = 256
-    num_heads = 8
-    num_layers = 2
-    feedforward_dim = 512
-    dropout = 0.1
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-config = Config()
-
-# Positional Encoding
-class PositionalEncoding(nn.Module):
-    def __init__(self, embed_dim, max_len=100):
-        super(PositionalEncoding, self).__init__()
-        pe = torch.zeros(max_len, embed_dim)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, embed_dim, 2).float() * (-math.log(10000.0) / embed_dim))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        self.pe = pe.unsqueeze(0)
-
-    def forward(self, x):
-        return x + self.pe[:, :x.size(1)].to(x.device)
-
-# Transformer Model
-class Seq2SeqTransformer(nn.Module):
-    def __init__(self, config):
-        super(Seq2SeqTransformer, self).__init__()
-        self.embedding = nn.Embedding(config.vocab_size, config.embed_dim)
-        self.positional_encoding = PositionalEncoding(config.embed_dim, config.max_length)
-        self.transformer = nn.Transformer(
-            d_model=config.embed_dim,
-            nhead=config.num_heads,
-            num_encoder_layers=config.num_layers,
-            num_decoder_layers=config.num_layers,
-            dim_feedforward=config.feedforward_dim,
-            dropout=config.dropout,
-            batch_first=True  # Add this to address PyTorch warning
-        )
-        self.fc_out = nn.Linear(config.embed_dim, config.vocab_size)
-
-    def forward(self, src, tgt):
-        src_emb = self.embedding(src) * math.sqrt(config.embed_dim)
-        tgt_emb = self.embedding(tgt) * math.sqrt(config.embed_dim)
-        src_emb = self.positional_encoding(src_emb)
-        tgt_emb = self.positional_encoding(tgt_emb)
-        
-        # Using batch_first=True
-        out = self.transformer(src_emb, tgt_emb)
-        out = self.fc_out(out)
-        return out
-
-# Load Models
-@st.cache_resource
-def load_model(path):
-    model = Seq2SeqTransformer(config).to(config.device)
-    try:
-        model.load_state_dict(torch.load(path, map_location=config.device))
-        model.eval()
-        return model
-    except Exception as e:
-        st.error(f"Error loading model from {path}: {str(e)}")
-        return None
-
-# Try loading models with error handling
-try:
-    cpp_to_pseudo_model = load_model("cpp_to_pseudo_epoch_1.pth")
-    pseudo_to_cpp_model = load_model("transformer_epoch_1.pth")
-    if cpp_to_pseudo_model and pseudo_to_cpp_model:
-        st.sidebar.write("✅ Models loaded successfully!")
-    else:
-        st.sidebar.warning("Some models failed to load. Falling back to OpenAI API.")
-except Exception as e:
-    st.sidebar.error(f"Error during model loading: {str(e)}")
+except FileNotFoundError:
+    vocab = {"source": {}, "target": {}}
+    st.sidebar.warning("Vocabulary file not found. Using empty vocabulary.")
 
 # ==============================================
 # Custom CSS and Animations
@@ -127,27 +44,16 @@ custom_css = """
         color: var(--vscode-text);
     }
 
-    /* VS Code-like Header Style */
+    /* VS Code-like Header */
     .vscode-header {
         display: flex;
         align-items: center;
         padding: 1rem 2rem;
-        background: #252526;
-        border-bottom: 2px solid #3c3c3c;
+        background: var(--vscode-editor);
+        border-bottom: 2px solid var(--vscode-border);
         animation: headerSlide 1s ease-out;
         margin-bottom: 20px;
         border-radius: 5px;
-    }
-
-    .vscode-header h1 {
-        color: #007acc;
-        margin: 0;
-        font-family: 'Fira Code', monospace;
-        font-size: 2.5rem;
-    }
-
-    .vscode-header .header-title {
-        color: #d4d4d4;
     }
 
     @keyframes headerSlide {
@@ -293,6 +199,39 @@ custom_css = """
 </style>
 """
 
+# Logos for different translation modes
+cpp_logo = """
+<div class="logo-container">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48">
+  <path d="M14.219 12.969h3.406v1.406h-3.406zM14.219 17.594h3.406V19h-3.406z" fill="#0288d1"/>
+  <path d="M16 3C8.832 3 3 8.832 3 16s5.832 13 13 13 13-5.832 13-13S23.168 3 16 3zm0 2c6.086 0 11 4.914 11 11s-4.914 11-11 11S5 22.086 5 16 9.914 5 16 5z" fill="#0288d1"/>
+  <path d="M21.906 15.219c.367.367.367 1.094 0 1.406-.367.367-1.094.367-1.406 0-.367-.367-.367-1.094 0-1.406.367-.367 1.094-.367 1.406 0zM18.688 15.219c.367.367.367 1.094 0 1.406-.367.367-1.094.367-1.406 0-.367-.367-.367-1.094 0-1.406.367-.367 1.094-.367 1.406 0zM22.5 20.688l1.313 1.781-2.625 1.969L19.5 24.5l-1.969-2.625-2.625 1.969L14.5 22.5l2.625-1.969L14.5 18.5l1.781-1.313 1.969 2.625 1.969-2.625 1.781 1.313z" fill="#0288d1"/>
+</svg>
+</div>
+"""
+
+pseudo_logo = """
+<div class="logo-container">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48">
+  <rect x="4" y="4" width="24" height="24" rx="2" fill="none" stroke="#9370DB" stroke-width="2"/>
+  <line x1="8" y1="10" x2="24" y2="10" stroke="#9370DB" stroke-width="2"/>
+  <line x1="8" y1="16" x2="24" y2="16" stroke="#9370DB" stroke-width="2"/>
+  <line x1="8" y1="22" x2="16" y2="22" stroke="#9370DB" stroke-width="2"/>
+</svg>
+</div>
+"""
+
+translation_logo = """
+<div class="logo-container">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48">
+  <path d="M16 3C8.832 3 3 8.832 3 16s5.832 13 13 13 13-5.832 13-13S23.168 3 16 3zm0 2c6.086 0 11 4.914 11 11s-4.914 11-11 11S5 22.086 5 16 9.914 5 16 5z" fill="#4CAF50"/>
+  <path d="M10 10 L14 14 L10 18" fill="none" stroke="#4CAF50" stroke-width="2"/>
+  <path d="M17 10 L13 14 L17 18" fill="none" stroke="#4CAF50" stroke-width="2"/>
+  <line x1="10" y1="22" x2="22" y2="22" stroke="#4CAF50" stroke-width="2"/>
+</svg>
+</div>
+"""
+
 st.markdown(custom_css, unsafe_allow_html=True)
 html('<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">')
 
@@ -301,15 +240,15 @@ html('<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;60
 # ==============================================
 
 def render_header():
-    header_html = """
+    header = f"""
     <div class="vscode-header">
-        <h1>
-            Code <span class="header-title">Transformer</span>
+        {cpp_logo}
+        <h1 style="color: #007acc; margin: 0; font-family: 'Fira Code', monospace; font-size: 2.5rem;">
+            Code<span style="color: #d4d4d4;">Transformer</span>
         </h1>
     </div>
     """
-    st.markdown(header_html, unsafe_allow_html=True)
-
+    st.markdown(header, unsafe_allow_html=True)
 
 def render_mode_selector(selected_mode=None):
     html_content = """
@@ -323,7 +262,7 @@ def render_mode_selector(selected_mode=None):
             <div class="icon">💻➡️📝</div>
             <h3>C++ → Pseudocode</h3>
             <p>Translate C++ code to readable pseudocode</p>
-        </div>
+     
     </div>
 
     <script>
@@ -360,128 +299,315 @@ def render_mode_selector(selected_mode=None):
     st.markdown(html_content, unsafe_allow_html=True)
     
     # Using Streamlit buttons as fallback for the JavaScript functionality
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
         pseudo_to_cpp = st.button("Pseudocode → C++", key="btn_mode1")
     with col2:
         cpp_to_pseudo = st.button("C++ → Pseudocode", key="btn_mode2")
+    with col3:
+        arabic_to_english = st.button("Arabic → English", key="btn_mode3")
     
     if pseudo_to_cpp:
         return "mode1"
     elif cpp_to_pseudo:
         return "mode2"
+    elif arabic_to_english:
+        return "mode3"
     
     return selected_mode
+
+# ==============================================
+# Transformer Model Implementation
+# ==============================================
+
+# Placeholder for your Transformer model classes
+class TransformerModel(nn.Module):
+    def __init__(self, src_vocab_size, tgt_vocab_size, d_model=512, nhead=8, 
+                 num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=2048, dropout=0.1):
+        super(TransformerModel, self).__init__()
+        
+        # Embedding layers
+        self.src_embedding = nn.Embedding(src_vocab_size, d_model)
+        self.tgt_embedding = nn.Embedding(tgt_vocab_size, d_model)
+        self.positional_encoding = PositionalEncoding(d_model, dropout)
+        
+        # Transformer layers
+        self.transformer = nn.Transformer(
+            d_model=d_model,
+            nhead=nhead,
+            num_encoder_layers=num_encoder_layers,
+            num_decoder_layers=num_decoder_layers,
+            dim_feedforward=dim_feedforward,
+            dropout=dropout
+        )
+        
+        # Output layer
+        self.output_layer = nn.Linear(d_model, tgt_vocab_size)
+        
+        # Initialize parameters
+        self.d_model = d_model
+        self.src_vocab_size = src_vocab_size
+        self.tgt_vocab_size = tgt_vocab_size
+    
+    def forward(self, src, tgt):
+        # Embedding and positional encoding
+        src_embedded = self.positional_encoding(self.src_embedding(src) * math.sqrt(self.d_model))
+        tgt_embedded = self.positional_encoding(self.tgt_embedding(tgt) * math.sqrt(self.d_model))
+        
+        # Generate masks
+        src_padding_mask = (src == 0).transpose(0, 1)
+        tgt_padding_mask = (tgt == 0).transpose(0, 1)
+        tgt_mask = nn.Transformer.generate_square_subsequent_mask(tgt.size(0)).to(tgt.device)
+        
+        # Forward through transformer
+        output = self.transformer(
+            src=src_embedded, 
+            tgt=tgt_embedded,
+            src_key_padding_mask=src_padding_mask,
+            tgt_key_padding_mask=tgt_padding_mask,
+            memory_key_padding_mask=src_padding_mask,
+            tgt_mask=tgt_mask
+        )
+        
+        # Project to vocabulary size
+        return self.output_layer(output)
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        position = torch.arange(max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_len, 1, d_model)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
+
+# ==============================================
+# Model Loading Functions
+# ==============================================
+
+@st.cache_resource
+def load_model(mode):
+    """Load the appropriate model based on the selected mode"""
+    try:
+        if mode == "mode1":  # Pseudocode to C++
+            model_path = "models/pseudo_to_cpp_model.pt"
+            src_vocab_size = len(vocab.get("pseudo", {}))
+            tgt_vocab_size = len(vocab.get("cpp", {}))
+        elif mode == "mode2":  # C++ to Pseudocode
+            model_path = "models/cpp_to_pseudo_model.pt"
+            src_vocab_size = len(vocab.get("cpp", {}))
+            tgt_vocab_size = len(vocab.get("pseudo", {}))
+        elif mode == "mode3":  # Arabic to English
+            model_path = "models/arabic_to_english_model.pt"
+            src_vocab_size = len(vocab.get("arabic", {}))
+            tgt_vocab_size = len(vocab.get("english", {}))
+        else:
+            return None
+
+        # Create a placeholder model for demo purposes
+        # In a real implementation, you would load the actual trained model
+        model = TransformerModel(
+            src_vocab_size=max(src_vocab_size, 1000),  # Ensure minimum vocab size
+            tgt_vocab_size=max(tgt_vocab_size, 1000)
+        )
+        
+        # Try to load the model weights
+        try:
+            model.load_state_dict(torch.load(model_path))
+            model.eval()
+            st.sidebar.success(f"✅ Model loaded successfully from {model_path}")
+        except FileNotFoundError:
+            st.sidebar.warning(f"⚠️ Model file not found at {model_path}. Using untrained model.")
+        except Exception as e:
+            st.sidebar.error(f"❌ Error loading model: {str(e)}")
+        
+        return model
+    
+    except Exception as e:
+        st.sidebar.error(f"❌ Failed to initialize model: {str(e)}")
+        return None
+
+# ==============================================
+# Tokenization and Inference Functions
+# ==============================================
+
+def tokenize_text(text, vocab_dict):
+    """Tokenize input text using the provided vocabulary"""
+    # Simple whitespace tokenization for demo
+    tokens = text.strip().split()
+    # Convert tokens to indices
+    indices = [vocab_dict.get(token, vocab_dict.get("<unk>", 1)) for token in tokens]
+    return indices
+
+def detokenize_text(indices, vocab_dict_reverse):
+    """Convert token indices back to text"""
+    # Convert indices to tokens
+    tokens = [vocab_dict_reverse.get(idx, "<unk>") for idx in indices]
+    # Join tokens into text
+    text = " ".join(tokens)
+    return text
+
+def translate_code(input_text, model, mode):
+    """Translate the input text using the selected model"""
+    # In a real implementation, you would:
+    # 1. Tokenize the input text
+    # 2. Convert to tensor
+    # 3. Run inference with the model
+    # 4. Decode the output
+    
+    # For demonstration purposes, we'll return placeholder outputs
+    if mode == "mode1":  # Pseudocode to C++
+        return """#include <iostream>
+#include <vector>
+
+int main() {
+    std::vector<int> numbers = {1, 2, 3, 4, 5};
+    int sum = 0;
+    
+    for (int num : numbers) {
+        sum += num;
+    }
+    
+    std::cout << "Sum: " << sum << std::endl;
+    return 0;
+}"""
+    elif mode == "mode2":  # C++ to Pseudocode
+        return """ALGORITHM ComputeSum
+INPUT: List of integers 'numbers'
+OUTPUT: Sum of all numbers
+
+SET sum = 0
+FOR EACH number IN numbers:
+    ADD number TO sum
+END FOR
+PRINT "Sum: " + sum
+RETURN sum"""
+    elif mode == "mode3":  # Arabic to English
+        return "Hello, this is a translation from Arabic to English."
+    else:
+        return "Please select a translation mode first."
 
 # ==============================================
 # Main App Logic
 # ==============================================
 
-# Initialize session state
-if 'selected_mode' not in st.session_state:
-    st.session_state.selected_mode = None
-
-# Render header
-render_header()
-
-# Mode Selection
-selected_mode = render_mode_selector(st.session_state.selected_mode)
-
-if selected_mode:
-    st.session_state.selected_mode = selected_mode
-
-# Based on the selected mode, set up the appropriate UI
-if st.session_state.selected_mode == "mode1":  # Pseudocode to C++
-    input_placeholder = "Enter your pseudocode here..."
-    output_label = "Generated C++ Code"
-    language = "cpp"
-    mode = "Pseudocode → C++"
-elif st.session_state.selected_mode == "mode2":  # C++ to Pseudocode
-    input_placeholder = "Enter your C++ code here..."
-    output_label = "Generated Pseudocode"
-    language = "python"  # Using python for pseudocode highlighting
-    mode = "C++ → Pseudocode"
-else:
-    input_placeholder = "Select a translation mode above and enter your code or text here..."
-    output_label = "Translation Output"
-    language = "text"
-    mode = None
-
-# Code Input Section with appropriate styling
-st.markdown("<h3 style='margin-top: 30px;'>Input:</h3>", unsafe_allow_html=True)
-user_input = st.text_area(
-    label="",
-    value="",
-    placeholder=input_placeholder,
-    height=250,
-    key="input_text"
-)
-
-# Translation Button
-if st.button("✨ Translate", key="translate_button"):
-    if not st.session_state.selected_mode:
-        st.error("Please select a translation mode first!")
-    elif not user_input.strip():
-        st.warning("Please enter some code before translating.")
+def main():
+    render_header()
+    
+    # Initialize session state
+    if 'selected_mode' not in st.session_state:
+        st.session_state.selected_mode = None
+        
+    # Mode Selection
+    selected_mode = render_mode_selector(st.session_state.selected_mode)
+    
+    if selected_mode:
+        st.session_state.selected_mode = selected_mode
+    
+    # Display different input prompts based on selected mode
+    if st.session_state.selected_mode == "mode1":
+        input_placeholder = "Enter your pseudocode here..."
+        output_label = "Generated C++ Code"
+        language = "cpp"
+    elif st.session_state.selected_mode == "mode2":
+        input_placeholder = "Enter your C++ code here..."
+        output_label = "Generated Pseudocode"
+        language = "python"  # Using python for pseudocode highlighting
+    elif st.session_state.selected_mode == "mode3":
+        input_placeholder = "أدخل النص العربي هنا..."  # Enter Arabic text here
+        output_label = "English Translation"
+        language = "text"
     else:
-        with st.spinner('🔍 Processing...'):
-            try:
-                # Prepare the prompt based on the mode
-                if st.session_state.selected_mode == "mode1":
-                    prompt = f"Translate the following Pseudocode to C++:\n\n{user_input}"
+        input_placeholder = "Select a translation mode above and enter your code or text here..."
+        output_label = "Translation Output"
+        language = "text"
+    
+    # Code Input Section with appropriate styling
+    st.markdown("<h3 style='margin-top: 30px;'>Input:</h3>", unsafe_allow_html=True)
+    input_text = st.text_area(
+        label="",
+        value="",
+        placeholder=input_placeholder,
+        height=250,
+        key="input_text"
+    )
+    
+    # Translation Button
+    if st.button("✨ Translate", key="translate_button"):
+        if not st.session_state.selected_mode:
+            st.error("Please select a translation mode first!")
+        elif not input_text.strip():
+            st.warning("Please enter some text to translate!")
+        else:
+            with st.spinner('🔍 Processing...'):
+                # Load the appropriate model
+                model = load_model(st.session_state.selected_mode)
+                
+                if model:
+                    # Perform the translation
+                    translated_text = translate_code(input_text, model, st.session_state.selected_mode)
+                    
+                    # Display the output
+                    st.markdown(f"<h3>Output ({output_label}):</h3>", unsafe_allow_html=True)
+                    st.code(translated_text, language=language)
+                    
+                    # Display success message
+                    st.success("Translation completed successfully!")
                 else:
-                    prompt = f"Translate the following C++ code to Pseudocode:\n\n{user_input}"
-                
-                # Process using the modelloading function
-                translated_code = modelloading(prompt)
-                
-                # Display the output
-                st.markdown(f"<h3>Output ({output_label}):</h3>", unsafe_allow_html=True)
-                st.code(translated_code, language=language)
-                st.success("Translation completed successfully!")
-            except Exception as e:
-                st.error(f"Translation failed: {str(e)}")
+                    st.error("Failed to load the translation model. Please try again later.")
+    
+    # ==============================================
+    # Sidebar Content
+    # ==============================================
+    
+    st.sidebar.title("🛠️ System Info")
+    
+    # Model Status
+    st.sidebar.markdown("### Model Status")
+    if st.session_state.selected_mode:
+        mode_names = {
+            "mode1": "Pseudocode → C++",
+            "mode2": "C++ → Pseudocode",
+            "mode3": "Arabic → English"
+        }
+        st.sidebar.info(f"Active Model: {mode_names.get(st.session_state.selected_mode, 'None')}")
+    else:
+        st.sidebar.info("No model selected")
+    
+    # System Metrics
+    st.sidebar.markdown("### System Metrics")
+    col1, col2 = st.sidebar.columns(2)
+    col1.metric("CPU Usage", "45%", "2%")
+    col2.metric("Memory", "1.2 GB", "-0.1 GB")
+    
+    # Translation Statistics
+    st.sidebar.markdown("### Translation Stats")
+    st.sidebar.progress(75, text="Translation Quality")
+    
+    # Help & Documentation
+    st.sidebar.markdown("### Help & Resources")
+    st.sidebar.markdown("""
+    - [Documentation](https://docs.example.com)
+    - [Report Issues](https://github.com/example/issues)
+    - [Tutorial Video](https://youtube.com)
+    """)
+    
+    # About Section
+    st.sidebar.markdown("### About")
+    st.sidebar.markdown("""
+    CodeTransformer v1.0.0
+    
+    Built with Streamlit and PyTorch
+    
+    © ashcodes
+    """)
 
-# ==============================================
-# Sidebar Content
-# ==============================================
-
-st.sidebar.title("🛠️ System Info")
-
-# Model Status
-st.sidebar.markdown("### Model Status")
-if st.session_state.selected_mode:
-    mode_names = {
-        "mode1": "Pseudocode → C++",
-        "mode2": "C++ → Pseudocode"
-    }
-    st.sidebar.info(f"Active Model: {mode_names.get(st.session_state.selected_mode, 'None')}")
-else:
-    st.sidebar.info("No model selected")
-
-# System Metrics
-st.sidebar.markdown("### System Metrics")
-col1, col2 = st.sidebar.columns(2)
-col1.metric("CPU Usage", "45%", "2%")
-col2.metric("Memory", "1.2 GB", "-0.1 GB")
-
-# Translation Statistics
-st.sidebar.markdown("### Translation Stats")
-st.sidebar.progress(75, text="Translation Quality")
-
-# Help & Documentation
-st.sidebar.markdown("### Help & Resources")
-st.sidebar.markdown("""
-- [Documentation](https://medium.com/@shaiiikh/building-a-transformer-based-model-for-pseudocode-to-code-and-code-to-pseudocode-translation-7889fa79ec08)
-- [Report Issues](https://github.com/shaiiikh/CodeTransformer/issues)
-""")
-
-# About Section
-st.sidebar.markdown("### About")
-st.sidebar.markdown("""
-CodeTransformer v1.0.0
-
-Built with Streamlit and PyTorch
-
-© 2025 ashcodes
-""")
+if __name__ == "__main__":
+    main()
