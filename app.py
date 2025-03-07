@@ -240,15 +240,22 @@ html('<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;60
 # ==============================================
 
 def render_header():
-    header = f"""
-    <div class="vscode-header">
-        {cpp_logo}
+    header = """
+    <div class="vscode-header" style="display: flex; align-items: center; gap: 10px;">
+        <div class="logo-container">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="48" height="48">
+                <path d="M14.219 12.969h3.406v1.406h-3.406zM14.219 17.594h3.406V19h-3.406z" fill="#0288d1"/>
+                <path d="M16 3C8.832 3 3 8.832 3 16s5.832 13 13 13 13-5.832 13-13S23.168 3 16 3zm0 2c6.086 0 11 4.914 11 11s-4.914 11-11 11S5 22.086 5 16 9.914 5 16 5z" fill="#0288d1"/>
+                <path d="M21.906 15.219c.367.367.367 1.094 0 1.406-.367.367-1.094.367-1.406 0-.367-.367-.367-1.094 0-1.406.367-.367 1.094-.367 1.406 0zM18.688 15.219c.367.367.367 1.094 0 1.406-.367.367-1.094.367-1.406 0-.367-.367-.367-1.094 0-1.406.367-.367 1.094-.367 1.406 0zM22.5 20.688l1.313 1.781-2.625 1.969L19.5 24.5l-1.969-2.625-2.625 1.969L14.5 22.5l2.625-1.969L14.5 18.5l1.781-1.313 1.969 2.625 1.969-2.625 1.781 1.313z" fill="#0288d1"/>
+            </svg>
+        </div>
         <h1 style="color: #007acc; margin: 0; font-family: 'Fira Code', monospace; font-size: 2.5rem;">
             Code<span style="color: #d4d4d4;">Transformer</span>
         </h1>
     </div>
     """
     st.markdown(header, unsafe_allow_html=True)
+
 
 def render_mode_selector(selected_mode=None):
     html_content = """
@@ -606,7 +613,7 @@ def main():
     
     Built with Streamlit and PyTorch
     
-    © ashcodes
+    © 2025 ashcodes
     """)
 
 if __name__ == "__main__":
