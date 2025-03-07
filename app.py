@@ -399,12 +399,13 @@ def main():
     # Code Input Section with appropriate styling
     st.markdown("<h3 style='margin-top: 30px;'>Input:</h3>", unsafe_allow_html=True)
     input_text = st.text_area(
-        label="",
-        value="",
-        placeholder=input_placeholder,
-        height=250,
-        key="input_text"
-    )
+    label="Input Code",  # Give it a meaningful label
+    placeholder=input_placeholder,
+    height=250,
+    key="input_text",
+    label_visibility="collapsed"  # Hides the label visually while keeping accessibility
+)
+
     
     # Translation Button
     if st.button("✨ Translate", key="translate_button"):
